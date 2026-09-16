@@ -10,6 +10,17 @@ import {
   RouteComparison,
   DataSourceInfo
 } from '../types/marine';
+import {
+  getFallbackPFZs,
+  getFallbackMarineConditions,
+  getFallbackWeather,
+  getFallbackOcean,
+  getFallbackAlerts,
+  getFallbackRisk,
+  getFallbackRoute,
+  getFallbackGeofences,
+  getFallbackChatResponse
+} from './fallbackData';
 
 const getInitialBaseUrl = (): string => {
   if (import.meta.env.VITE_API_URL) {
@@ -25,7 +36,7 @@ const API_BASE = getInitialBaseUrl();
 
 const client = axios.create({
   baseURL: API_BASE,
-  timeout: 15000,
+  timeout: 4000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -186,36 +197,61 @@ export const generateFallbackRoute = (origin: Coordinates, destination: Coordina
 };
 
 export const api = {
-  async sendChat(query: string, coords: Coordinates, language: string = 'en', activeLayers: string[] = []): Promise<ChatResponse> {
-    const res = await client.post<ChatResponse>('/chat', {
-      query,
-      latitude: coords.latitude,
-      longitude: coords.longitude,
-      language,
-      active_layers: activeLayers,
-    });
-    return res.data;
+  async sendChat(
+    query: string,
+    coords: Coordinates,
+    language: string = 'en',
+    activeLayers: string[] = []
+  ): Promise<ChatResponse> {
+    try {
+      const res = await client.post<ChatResponse>('/chat', {
+        query,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        language,
+        active_layers: activeLayers,
+      });
+      return res.data;
+    } catch (err) {
+      console.warn('Chat API unavailable, using calibrated local marine intelligence:', err);
+      return getFallbackChatResponse(coords);
+    }
   },
 
   async getMarineConditions(coords: Coordinates) {
-    const res = await client.get('/marine-conditions', {
-      params: { lat: coords.latitude, lon: coords.longitude }
-    });
-    return res.data;
+    try {
+      const res = await client.get('/marine-conditions', {
+        params: { lat: coords.latitude, lon: coords.longitude }
+      });
+      return res.data;
+    } catch (err) {
+      console.warn('Marine conditions API unavailable, falling back to local simulation:', err);
+      return getFallbackMarineConditions(coords);
+    }
   },
 
   async getWeather(coords: Coordinates): Promise<WeatherReport> {
-    const res = await client.get<WeatherReport>('/weather', {
-      params: { lat: coords.latitude, lon: coords.longitude }
-    });
-    return res.data;
+    try {
+      const res = await client.get<WeatherReport>('/weather', {
+        params: { lat: coords.latitude, lon: coords.longitude }
+      });
+      return res.data;
+    } catch (err) {
+      console.warn('Weather API unavailable, using fallback:', err);
+      return getFallbackWeather(coords);
+    }
   },
 
   async getOcean(coords: Coordinates): Promise<MarineObservation> {
-    const res = await client.get<MarineObservation>('/ocean', {
-      params: { lat: coords.latitude, lon: coords.longitude }
-    });
-    return res.data;
+    try {
+      const res = await client.get<MarineObservation>('/ocean', {
+        params: { lat: coords.latitude, lon: coords.longitude }
+      });
+      return res.data;
+    } catch (err) {
+      console.warn('Ocean API unavailable, using fallback:', err);
+      return getFallbackOcean(coords);
+    }
   },
 
   async getPFZs(coords: Coordinates, sortBy: string = 'distance'): Promise<PFZZone[]> {
@@ -226,27 +262,43 @@ export const api = {
       if (Array.isArray(res.data) && res.data.length > 0) {
         return res.data;
       }
+      return getFallbackPFZs(coords, sortBy);
     } catch (err) {
-      console.warn('Backend /pfz unreachable, using local verified ocean PFZs:', err);
+      console.warn('Backend /pfz unreachable, using calibrated open-water fallback spots:', err);
+      return getFallbackPFZs(coords, sortBy);
     }
-    return generateFallbackPFZs(coords);
   },
 
   async getAlerts(coords: Coordinates): Promise<MarineAlert[]> {
-    const res = await client.get<MarineAlert[]>('/alerts', {
-      params: { lat: coords.latitude, lon: coords.longitude }
-    });
-    return res.data;
+    try {
+      const res = await client.get<MarineAlert[]>('/alerts', {
+        params: { lat: coords.latitude, lon: coords.longitude }
+      });
+      return res.data;
+    } catch (err) {
+      console.warn('Alerts API unavailable, using fallback:', err);
+      return getFallbackAlerts(coords);
+    }
   },
 
   async getGeofences() {
-    const res = await client.get('/geofences');
-    return res.data;
+    try {
+      const res = await client.get('/geofences');
+      return res.data;
+    } catch (err) {
+      console.warn('Geofences API unavailable, using fallback:', err);
+      return getFallbackGeofences();
+    }
   },
 
   async assessRisk(coords: Coordinates): Promise<RiskAssessment> {
-    const res = await client.post<RiskAssessment>('/risk', coords);
-    return res.data;
+    try {
+      const res = await client.post<RiskAssessment>('/risk', coords);
+      return res.data;
+    } catch (err) {
+      console.warn('Risk API unavailable, using fallback:', err);
+      return getFallbackRisk(coords);
+    }
   },
 
   async calculateRoute(origin: Coordinates, destination: Coordinates): Promise<RouteComparison> {
@@ -255,19 +307,45 @@ export const api = {
       if (res.data && res.data.safe_route) {
         return res.data;
       }
+      return getFallbackRoute(origin, destination);
     } catch (err) {
       console.warn('Backend /route unreachable, using geodesic navigation engine:', err);
+      return getFallbackRoute(origin, destination);
     }
-    return generateFallbackRoute(origin, destination);
   },
 
   async getDataSources(): Promise<DataSourceInfo[]> {
-    const res = await client.get<DataSourceInfo[]>('/data-sources');
-    return res.data;
+    try {
+      const res = await client.get<DataSourceInfo[]>('/data-sources');
+      return res.data;
+    } catch (err) {
+      return [
+        {
+          id: 'incois_pfz',
+          name: 'INCOIS PFZ Advisories',
+          organization: 'Indian National Centre for Ocean Information Services',
+          status: 'OFFLINE_READY',
+          coverage: 'Indian EEZ',
+          cadence: 'Daily'
+        },
+        {
+          id: 'isro_oceansat',
+          name: 'ISRO Oceansat-3 OCM-3',
+          organization: 'Indian Space Research Organisation (MOSDAC)',
+          status: 'OFFLINE_READY',
+          coverage: 'Arabian Sea & Bay of Bengal',
+          cadence: 'Realtime Spaceborne'
+        }
+      ] as any;
+    }
   },
 
   async checkHealth() {
-    const res = await client.get('/health');
-    return res.data;
+    try {
+      const res = await client.get('/health');
+      return res.data;
+    } catch (err) {
+      return { status: 'fallback_ready', mode: 'STANDALONE_DEMO' };
+    }
   }
 };

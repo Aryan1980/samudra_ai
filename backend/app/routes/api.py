@@ -118,7 +118,8 @@ async def get_marine_conditions(
         "boundary_context": boundary_ctx,
         "risk": risk,
         "active_alerts": alerts,
-        "nearest_pfz": pfzs[0] if pfzs else None
+        "nearest_pfz": pfzs[0] if pfzs else None,
+        "pfzs": pfzs
     }
 
 @router.get("/data-sources", response_model=List[DataSourceInfo])

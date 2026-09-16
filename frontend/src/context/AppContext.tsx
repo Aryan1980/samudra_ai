@@ -54,6 +54,8 @@ export interface AppContextType {
   refreshConditions: () => Promise<void>;
 }
 
+import { getFallbackPFZs } from '../services/fallbackData';
+
 const DEFAULT_COORDS: Coordinates = { latitude: 9.9312, longitude: 76.2673 };
 const DEFAULT_NAME = 'Kochi (Cochin), Kerala';
 const DEFAULT_LAYERS = ['pfz', 'waves', 'imbl', 'risk_zones'];
@@ -70,7 +72,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [weather, setWeather] = useState<WeatherReport | null>(null);
   const [ocean, setOcean] = useState<MarineObservation | null>(null);
   const [risk, setRisk] = useState<RiskAssessment | null>(null);
-  const [pfzs, setPfzs] = useState<PFZZone[]>(() => generateFallbackPFZs(DEFAULT_COORDS));
+  const [pfzs, setPfzs] = useState<PFZZone[]>(() => getFallbackPFZs(DEFAULT_COORDS));
   const [alerts, setAlerts] = useState<MarineAlert[]>([]);
   const [routeComparison, setRouteComparison] = useState<RouteComparison | null>(null);
   const [selectedPFZForRoute, setSelectedPFZForRoute] = useState<PFZZone | null>(null);
@@ -111,20 +113,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (conditionsRes.status === 'fulfilled' && conditionsRes.value) {
         const data = conditionsRes.value;
-        setWeather(data.weather);
-        setOcean(data.ocean);
-        setRisk(data.risk);
-        setAlerts(data.active_alerts || []);
+        if (data.weather) setWeather(data.weather);
+        if (data.ocean) setOcean(data.ocean);
+        if (data.risk) setRisk(data.risk);
+        if (data.active_alerts) setAlerts(data.active_alerts);
+        if (data.pfzs && Array.isArray(data.pfzs) && data.pfzs.length > 0) {
+          setPfzs(data.pfzs);
+        }
       }
 
       if (pfzRes.status === 'fulfilled' && pfzRes.value && pfzRes.value.length > 0) {
         setPfzs(pfzRes.value);
       } else {
-        setPfzs((prev) => (prev.length > 0 ? prev : generateFallbackPFZs(loc)));
+        setPfzs((prev) => (prev.length > 0 ? prev : getFallbackPFZs(loc)));
       }
     } catch (err) {
       console.warn('Notice refreshing marine conditions:', err);
-      setPfzs((prev) => (prev.length > 0 ? prev : generateFallbackPFZs(loc)));
+      setPfzs((prev) => (prev.length > 0 ? prev : getFallbackPFZs(loc)));
     } finally {
       setIsAnalyzing(false);
     }

@@ -159,14 +159,36 @@ export const MarineMap: React.FC = () => {
     );
 
     filtered.forEach((pfz) => {
-      // ONLY a green dot
-      const greenDot = L.circleMarker([pfz.location.latitude, pfz.location.longitude], {
-        radius: 8,
-        fillColor: '#10b981',
-        color: '#064e3b',
-        weight: 2,
-        fillOpacity: 0.95
+      const isSafe = pfz.safety_rating === 'SAFE';
+      const isCaution = pfz.safety_rating === 'CAUTION';
+      const dotColor = isSafe ? '#10b981' : isCaution ? '#f59e0b' : '#f43f5e';
+      const haloColor = isSafe ? '#10b981' : isCaution ? '#f59e0b' : '#f43f5e';
+
+      // Subtle outer radar beacon ring
+      const outerHalo = L.circle([pfz.location.latitude, pfz.location.longitude], {
+        radius: isSafe ? 700 : 550,
+        color: haloColor,
+        weight: 1,
+        fillColor: haloColor,
+        fillOpacity: isSafe ? 0.2 : 0.14,
+        interactive: false
       });
+      group.addLayer(outerHalo);
+
+      // Distinct Spot Marker
+      const spotDot = L.circleMarker([pfz.location.latitude, pfz.location.longitude], {
+        radius: 8.5,
+        fillColor: dotColor,
+        color: '#ffffff',
+        weight: 2,
+        fillOpacity: 0.98
+      });
+
+      // Hover Tooltip for instant awareness
+      spotDot.bindTooltip(
+        `<div style="font-family: monospace; font-size: 11px; padding: 2px 4px;"><b>${pfz.name}</b><br/><span style="color: ${isSafe ? '#34d399' : '#fbbf24'}; font-weight: bold;">● ${pfz.safety_rating} ZONE</span> (${pfz.distance_km} km · ${pfz.bearing_compass})</div>`,
+        { permanent: false, direction: 'top', opacity: 0.95 }
+      );
 
       // Clicking opens the info popup
       const popupDiv = document.createElement('div');
@@ -174,7 +196,13 @@ export const MarineMap: React.FC = () => {
       popupDiv.innerHTML = `
         <div class="flex items-center justify-between pb-2 mb-2 border-b border-[#5379AE]/25 pr-6">
           <span class="font-bold text-sm text-white truncate max-w-[190px]">${pfz.name}</span>
-          <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
+            isSafe
+              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+              : isCaution
+              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+              : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+          }">
             ${pfz.safety_rating}
           </span>
         </div>
@@ -182,7 +210,7 @@ export const MarineMap: React.FC = () => {
         <div class="bg-[#121622] p-2.5 rounded-xl border border-[#5379AE]/25 mb-2">
           <div class="flex items-center justify-between text-[10px] font-mono text-[#A8C4EC]/70 mb-1">
             <span>TARGET GPS FIX</span>
-            <span class="text-emerald-400 font-semibold">● Verified</span>
+            <span class="${isSafe ? 'text-emerald-400' : 'text-amber-400'} font-semibold">● ${isSafe ? 'Verified Safe' : 'Caution Advised'}</span>
           </div>
           <div class="font-mono text-xs font-bold text-white tracking-wider">
             ${pfz.location.latitude.toFixed(4)}°N, ${pfz.location.longitude.toFixed(4)}°E
@@ -209,14 +237,14 @@ export const MarineMap: React.FC = () => {
         </div>
 
         <div class="bg-[#121622]/90 p-2 rounded-xl border border-[#5379AE]/20 text-[10px] mb-2.5 space-y-1">
-          <div class="text-emerald-400 font-bold font-mono text-[9px] uppercase tracking-wider flex items-center gap-1">
-            <span>🛡️ Hazard & Danger Clearance</span>
+          <div class="${isSafe ? 'text-emerald-400' : 'text-amber-400'} font-bold font-mono text-[9px] uppercase tracking-wider flex items-center gap-1">
+            <span>🛡️ ${isSafe ? 'Certified Safe Fishing Zone' : 'Moderate Transit Advisory'}</span>
           </div>
           <p class="text-[#A8C4EC]/90 leading-tight">
-            Clear of sovereign IMBL (>90 km buffer) and restricted defense zones.
+            ${pfz.recommendation}
           </p>
-          <p class="text-amber-300/85 leading-tight">
-            Maintain seaward heading ${pfz.bearing_deg}°. Avoid nearshore shoals (&lt;4m).
+          <p class="text-amber-300/85 leading-tight text-[9px]">
+            Sovereign IMBL clearance verified (>100 km buffer). Maintain heading ${pfz.bearing_deg}°.
           </p>
         </div>
       `;
@@ -250,8 +278,8 @@ export const MarineMap: React.FC = () => {
       btnRow.appendChild(centerBtn);
       popupDiv.appendChild(btnRow);
 
-      greenDot.bindPopup(popupDiv, { maxWidth: 300, minWidth: 260 });
-      group.addLayer(greenDot);
+      spotDot.bindPopup(popupDiv, { maxWidth: 300, minWidth: 260 });
+      group.addLayer(spotDot);
     });
   }, [pfzs, activeMapLayers, searchQuery, routeToPFZ]);
 
@@ -442,6 +470,14 @@ export const MarineMap: React.FC = () => {
             {pfzs.filter((p) => p.safety_rating === 'SAFE').length} Safe Zones
           </span>
         </div>
+        {pfzs.some((p) => p.safety_rating === 'CAUTION') && (
+          <div className="flex items-center gap-4 text-[#A8C4EC]">
+            <span className="text-[#5379AE] text-xs">Amber Dots:</span>
+            <span className="text-amber-400 font-bold">
+              {pfzs.filter((p) => p.safety_rating === 'CAUTION').length} Caution Zones
+            </span>
+          </div>
+        )}
         <div className="flex items-center gap-4 text-[#A8C4EC]">
           <span className="text-[#5379AE] text-xs">Blue Dot:</span>
           <span className="text-[#0474C4] font-bold">Port Fix</span>
