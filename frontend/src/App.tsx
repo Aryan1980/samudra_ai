@@ -11,6 +11,7 @@ import { AgentTracePanel } from './components/Observability/AgentTracePanel';
 import { ArchitectureView } from './components/Pages/ArchitectureView';
 import { DataSourcesView } from './components/Pages/DataSourcesView';
 import { MarineTrendsModal } from './components/Charts/MarineTrendsModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const MainContent = () => {
   const { activeTab } = useApp();
@@ -42,7 +43,9 @@ const MainContent = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[550px]">
               {/* Map: 7 cols on desktop */}
               <div className="lg:col-span-7 h-[550px]">
-                <MarineMap />
+                <ErrorBoundary>
+                  <MarineMap />
+                </ErrorBoundary>
               </div>
 
               {/* Conversational Assistant: 5 cols on desktop */}
@@ -98,10 +101,12 @@ const MainContent = () => {
 
 export default function App() {
   return (
-    <AppProvider>
-      <div className="min-h-screen bg-[#FFF570] text-black flex flex-col font-mono selection:bg-black selection:text-[#FFF570]">
-        <MainContent />
-      </div>
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <div className="min-h-screen bg-[#FFF570] text-black flex flex-col font-mono selection:bg-black selection:text-[#FFF570]">
+          <MainContent />
+        </div>
+      </AppProvider>
+    </ErrorBoundary>
   );
 }

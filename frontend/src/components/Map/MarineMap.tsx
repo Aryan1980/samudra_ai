@@ -24,41 +24,57 @@ export const MarineMap = () => {
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    const map = L.map(mapContainerRef.current, {
-      center: [activeLocation.latitude, activeLocation.longitude],
-      zoom: 8,
-      zoomControl: false,
-      attributionControl: false
-    });
+    // Guard against re-mount / StrictMode stale container id
+    delete (mapContainerRef.current as any)._leaflet_id;
 
-    // Dark Matter CartoDB Basemap
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd',
-    }).addTo(map);
+    try {
+      const map = L.map(mapContainerRef.current, {
+        center: [activeLocation.latitude, activeLocation.longitude],
+        zoom: 8,
+        zoomControl: false,
+        attributionControl: false
+      });
 
-    L.control.zoom({ position: 'bottomright' }).addTo(map);
+      // Dark Matter CartoDB Basemap
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+      }).addTo(map);
 
-    // Click handler to set vessel location
-    map.on('click', (e: L.LeafletMouseEvent) => {
-      setActiveLocation(
-        { latitude: e.latlng.lat, longitude: e.latlng.lng },
-        `Target: ${e.latlng.lat.toFixed(4)}?N, ${e.latlng.lng.toFixed(4)}?E`
-      );
-    });
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Initialize LayerGroups
-    const layers = ['vessel', 'pfz', 'sst', 'chlorophyll', 'waves', 'wind', 'imbl', 'mpas', 'restricted', 'route', 'risk_zones'];
-    layers.forEach((id) => {
-      const group = L.layerGroup().addTo(map);
-      layerGroupsRef.current[id] = group;
-    });
+      // Click handler to set vessel location
+      map.on('click', (e: L.LeafletMouseEvent) => {
+        setActiveLocation(
+          { latitude: e.latlng.lat, longitude: e.latlng.lng },
+          `Target: ${e.latlng.lat.toFixed(4)}°N, ${e.latlng.lng.toFixed(4)}°E`
+        );
+      });
 
-    mapInstanceRef.current = map;
+      // Initialize LayerGroups
+      const layers = ['vessel', 'pfz', 'sst', 'chlorophyll', 'waves', 'wind', 'imbl', 'mpas', 'restricted', 'route', 'risk_zones'];
+      layers.forEach((id) => {
+        const group = L.layerGroup().addTo(map);
+        layerGroupsRef.current[id] = group;
+      });
+
+      mapInstanceRef.current = map;
+    } catch (err) {
+      console.error('Leaflet map initialization error:', err);
+    }
 
     return () => {
-      map.remove();
-      mapInstanceRef.current = null;
+      try {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.remove();
+          mapInstanceRef.current = null;
+        }
+      } catch (err) {
+        console.warn('Leaflet cleanup notice:', err);
+      }
+      if (mapContainerRef.current) {
+        delete (mapContainerRef.current as any)._leaflet_id;
+      }
     };
   }, []);
 
@@ -82,7 +98,7 @@ export const MarineMap = () => {
         <div class="absolute w-12 h-12 rounded-full border border-cyan-400/80 sonar-circle pointer-events-none"></div>
         <div class="absolute w-8 h-8 bg-cyan-500/20 rounded-full animate-ping pointer-events-none"></div>
         <div class="relative w-6 h-6 bg-gradient-to-tr from-cyan-600 to-blue-500 border-2 border-white rounded-full shadow-[0_0_15px_rgba(6,182,212,0.8)] flex items-center justify-center text-[10px] text-white font-black">
-          ?
+          ⚓
         </div>
       </div>
     `;
@@ -97,10 +113,10 @@ export const MarineMap = () => {
       .bindPopup(`
         <div class="p-2 text-slate-100 font-sans min-w-[180px]">
           <div class="flex items-center gap-1.5 font-bold text-xs text-cyan-300 pb-1 border-b border-slate-700/60">
-            <span>?? Active Vessel Position</span>
+            <span>🚢 Active Vessel Position</span>
           </div>
           <div class="text-xs text-cyan-400 font-mono mt-1.5 font-semibold">
-            ${activeLocation.latitude.toFixed(4)}?N, ${activeLocation.longitude.toFixed(4)}?E
+            ${activeLocation.latitude.toFixed(4)}°N, ${activeLocation.longitude.toFixed(4)}°E
           </div>
           <div class="text-[10px] text-slate-400 mt-1">
             Live Sonar Transponder: Synchronized
@@ -142,7 +158,7 @@ export const MarineMap = () => {
       popupDiv.innerHTML = `
         <div class="flex items-center justify-between pb-1 border-b border-emerald-500/30">
           <span class="font-extrabold text-xs text-emerald-300 flex items-center gap-1">
-            ?? ${pfz.name}
+            🐟 ${pfz.name}
           </span>
           <span class="text-[9px] font-mono px-1.5 py-0.2 rounded font-bold ${
             pfz.safety_rating === 'SAFE' ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-amber-950 text-amber-300 border border-amber-700'
@@ -155,11 +171,11 @@ export const MarineMap = () => {
           </div>
           <div class="flex justify-between">
             <span class="text-slate-400">SST Gradient:</span>
-            <strong class="font-mono text-amber-300">${pfz.sst_c}?C</strong>
+            <strong class="font-mono text-amber-300">${pfz.sst_c}°C</strong>
           </div>
           <div class="flex justify-between">
             <span class="text-slate-400">Chlorophyll-a:</span>
-            <strong class="font-mono text-emerald-300">${pfz.chlorophyll_mg_m3} mg/m?</strong>
+            <strong class="font-mono text-emerald-300">${pfz.chlorophyll_mg_m3} mg/m³</strong>
           </div>
           <div class="flex justify-between">
             <span class="text-slate-400">Suitability Index:</span>
@@ -169,7 +185,7 @@ export const MarineMap = () => {
       `;
       const routeBtn = document.createElement('button');
       routeBtn.className = 'w-full py-1.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg text-xs font-bold shadow-lg shadow-cyan-900/40 cursor-pointer transition-all';
-      routeBtn.textContent = '?? Calculate Safe Route';
+      routeBtn.textContent = '🧭 Calculate Safe Route';
       routeBtn.onclick = () => routeToPFZ(pfz);
       popupDiv.appendChild(routeBtn);
 
@@ -298,14 +314,14 @@ export const MarineMap = () => {
         fillColor: '#ea580c',
         fillOpacity: 0.18,
         weight: 1
-      }).bindTooltip('SST Warm Core (29.1?C)', { permanent: false });
+      }).bindTooltip('SST Warm Core (29.1°C)', { permanent: false });
       const sstCircle2 = L.circle([lat - 0.2, lon - 0.3], {
         radius: 26000,
         color: '#38bdf8',
         fillColor: '#0284c7',
         fillOpacity: 0.18,
         weight: 1
-      }).bindTooltip('SST Coastal Upwelling Front (27.8?C)', { permanent: false });
+      }).bindTooltip('SST Coastal Upwelling Front (27.8°C)', { permanent: false });
       sstGroup.addLayer(sstCircle1);
       sstGroup.addLayer(sstCircle2);
     }
@@ -317,7 +333,7 @@ export const MarineMap = () => {
         fillColor: '#059669',
         fillOpacity: 0.25,
         weight: 1
-      }).bindTooltip('High Chlorophyll-a Plume (3.2 mg/m?)', { permanent: false });
+      }).bindTooltip('High Chlorophyll-a Plume (3.2 mg/m³)', { permanent: false });
       chlGroup.addLayer(chlCircle);
     }
   }, [activeLocation.latitude, activeLocation.longitude, activeMapLayers]);
@@ -358,7 +374,7 @@ export const MarineMap = () => {
       opacity: 0.95
     }).bindPopup(`
       <div class="p-2 text-slate-100 text-xs">
-        <strong class="text-emerald-300 font-bold flex items-center gap-1">? Recommended Safe Route (${routeComparison.safe_route.distance_km} km)</strong><br/>
+        <strong class="text-emerald-300 font-bold flex items-center gap-1">✅ Recommended Safe Route (${routeComparison.safe_route.distance_km} km)</strong><br/>
         <span class="text-[11px] text-slate-300">Est. Duration: ${routeComparison.safe_route.estimated_duration_hours} hrs</span><br/>
         <p class="text-slate-300 text-[10px] mt-1">${routeComparison.reasoning}</p>
       </div>
