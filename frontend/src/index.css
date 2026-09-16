@@ -1,0 +1,272 @@
+/* ---------- Google Fonts (Newsreader, Playfair Display, Inter, Outfit, Roboto, JetBrains Mono) ---------- */
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&family=Roboto:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+.font-editorial {
+  font-family: 'Newsreader', 'Playfair Display', Georgia, serif;
+}
+
+.font-roboto {
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ---------- Signature Accent Button (Preserving Landing Page JetBrains Mono Typography) ---------- */
+.btn-signature {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.6rem;
+  border-radius: 0.75rem;
+  background-color: #1d2436;
+  color: #f1f5fb;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  border: 1px solid rgba(83, 121, 174, 0.35);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+}
+
+.btn-signature:hover {
+  background-color: #242d42;
+  border-color: rgba(83, 121, 174, 0.55);
+  box-shadow: 0 6px 24px rgba(4, 116, 196, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.btn-signature:active {
+  transform: translateY(0);
+}
+
+.btn-signature-sm {
+  padding: 0.65rem 1.25rem;
+  font-size: 0.7rem;
+}
+
+/* Card Chamfered Top-Right (Matching Reference Image 1) */
+.card-chamfered {
+  clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 0 100%);
+}
+
+/* Decorative striped / hatched banner band matching Image 1 category bar */
+.banner-hatched-rust {
+  background: repeating-linear-gradient(
+    90deg,
+    #cf5732,
+    #cf5732 4px,
+    #b24322 4px,
+    #b24322 8px
+  );
+}
+
+.banner-hatched-sapphire {
+  background: repeating-linear-gradient(
+    90deg,
+    #0474c4,
+    #0474c4 4px,
+    #06457f 4px,
+    #06457f 8px
+  );
+}
+
+.banner-hatched-pine {
+  background: repeating-linear-gradient(
+    90deg,
+    #2c444c,
+    #2c444c 4px,
+    #1d2e34 4px,
+    #1d2e34 8px
+  );
+}
+
+.banner-hatched-steel {
+  background: repeating-linear-gradient(
+    90deg,
+    #5379ae,
+    #5379ae 4px,
+    #3b5c8a 4px,
+    #3b5c8a 8px
+  );
+}
+
+
+
+/* ---------- Root Token System: Sapphire Nightfall Whisper ---------- */
+:root {
+  --color-bg:       #151926;   /* Midnight Slate (#262B40 deep base) */
+  --color-surface:  #1d2334;   /* Surface Obsidian (#262B40 / #2C444C) */
+  --color-surface2: #262b40;   /* Midnight Dark Charcoal (#262B40) */
+  --color-navy:     #06457f;   /* Deep Marine Navy (#06457F) */
+  --color-sapphire: #0474c4;   /* Electric Sapphire (#0474C4) */
+  --color-steel:    #5379ae;   /* Slate Steel Blue (#5379AE) */
+  --color-pine:     #2c444c;   /* Deep Teal Slate (#2C444C) */
+  --color-whisper:  #a8c4ec;   /* Soft Whisper Sky (#A8C4EC) */
+  --color-border:   rgba(83, 121, 174, 0.22);
+  --color-border2:  rgba(83, 121, 174, 0.38);
+  --color-text:     #f1f5fb;
+  --color-muted:    #a8c4ec;
+  --color-safe:     #34d399;
+  --color-warn:     #fbbf24;
+  --color-danger:   #f87171;
+
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+body, html, #root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+h1, h2, h3, h4, .font-heading {
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+}
+
+.font-mono, code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Eliminate focus outline flash across elements */
+button:focus,
+button:focus-visible,
+a:focus,
+a:focus-visible,
+div:focus,
+div:focus-visible {
+  outline: none !important;
+}
+
+/* ---------- Base Reset ---------- */
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Scrollbar ---------- */
+::-webkit-scrollbar        { width: 4px; height: 4px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: #1e2d40; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #22d3ee; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ---------- Leaflet Map & Seamless Popups ---------- */
+.leaflet-container {
+  background: #04070e !important;
+  font-family: inherit !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #f1f5fb !important;
+  padding: 0 !important;
+  border-radius: 16px !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: inherit !important;
+}
+
+.leaflet-popup-tip-container {
+  display: none !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  top: 12px !important;
+  right: 12px !important;
+  color: #a8c4ec !important;
+  font-size: 14px !important;
+  width: 22px !important;
+  height: 22px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 9999px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(83, 121, 174, 0.35) !important;
+  text-decoration: none !important;
+  transition: all 0.15s ease !important;
+  z-index: 20 !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.22) !important;
+  border-color: rgba(83, 121, 174, 0.65) !important;
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes sonarPulse {
+  0%   { transform: scale(1);   opacity: 0.8; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.sonar-ring {
+  animation: sonarPulse 2.2s cubic-bezier(0.1, 0.3, 0.4, 1) infinite;
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.35s ease both;
+}
+
+/* Skeleton shimmer */
+.skeleton {
+  background: linear-gradient(90deg, #0f1625 25%, #1a2540 50%, #0f1625 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/* ---------- Utility ---------- */
+.glass {
+  background: rgba(10, 15, 28, 0.75);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--color-border);
+}
+
+.glass-hover:hover {
+  border-color: var(--color-border2);
+}

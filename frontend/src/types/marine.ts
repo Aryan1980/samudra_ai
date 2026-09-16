@@ -1,0 +1,201 @@
+export interface Coordinates {
+  latitude: float;
+  longitude: float;
+}
+
+export type float = number;
+
+export interface MarineObservation {
+  location: Coordinates;
+  timestamp: string;
+  sst?: number;
+  chlorophyll?: number;
+  wave_height?: number;
+  wave_direction?: number;
+  wind_speed?: number;
+  wind_direction?: number;
+  rainfall?: number;
+  tide?: string;
+  tide_height_m?: number;
+  sea_state?: string;
+  source: string;
+  data_type: string;
+  is_demo: boolean;
+}
+
+export interface WeatherReport {
+  location: Coordinates;
+  timestamp: string;
+  temperature_c: number;
+  wind_speed_kmh: number;
+  wind_direction_deg: number;
+  wind_gust_kmh: number;
+  wave_height_m: number;
+  wave_direction_deg: number;
+  rainfall_mm: number;
+  humidity_pct: number;
+  visibility_km: number;
+  lightning_detected: boolean;
+  lightning_distance_km?: number;
+  cyclone_status: 'none' | 'watch' | 'warning';
+  cyclone_category?: string;
+  advisory_text?: string;
+  source: string;
+  is_demo: boolean;
+}
+
+export interface PFZZone {
+  id: string;
+  name: string;
+  location: Coordinates;
+  polygon: [number, number][];
+  distance_km: number;
+  bearing_deg: number;
+  bearing_compass: string;
+  sst_c: number;
+  chlorophyll_mg_m3: number;
+  suitability_score: number;
+  safety_rating: 'SAFE' | 'CAUTION' | 'AVOID';
+  recommendation: string;
+  avoids: boolean;
+  source: string;
+  is_demo: boolean;
+}
+
+export interface FactorScore {
+  factor_name: string;
+  raw_value: number;
+  unit: string;
+  score: number;
+  weight: number;
+  weighted_score: number;
+  severity: 'LOW' | 'MODERATE' | 'HIGH' | 'EXTREME';
+  explanation: string;
+}
+
+export interface RiskAssessment {
+  overall_score: number;
+  risk_level: 'LOW' | 'MODERATE' | 'HIGH' | 'EXTREME';
+  safety_verdict: 'SAFE' | 'SAFE_WITH_CAUTION' | 'UNSAFE' | 'HAZARDOUS';
+  recommendation: string;
+  factors: FactorScore[];
+  summary_reasons: string[];
+  timestamp: string;
+  calculation_method: string;
+  disclaimer: string;
+}
+
+export interface Waypoint {
+  name: string;
+  latitude: number;
+  longitude: number;
+  hazard_distance_km?: number;
+  segment_risk: string;
+}
+
+export interface RouteOption {
+  route_type: 'shortest' | 'safe';
+  waypoints: Waypoint[];
+  distance_km: number;
+  estimated_duration_hours: number;
+  risk_level: string;
+  hazards_intersected: string[];
+  description: string;
+}
+
+export interface RouteComparison {
+  origin: Coordinates;
+  destination: Coordinates;
+  shortest_route: RouteOption;
+  safe_route: RouteOption;
+  recommendation: string;
+  reasoning: string;
+}
+
+export interface MarineAlert {
+  id: string;
+  title: string;
+  severity: 'EXTREME' | 'HIGH' | 'MODERATE' | 'INFORMATIONAL';
+  category: string;
+  location: Coordinates;
+  affected_radius_km: number;
+  message: string;
+  issued_at: string;
+  expires_at: string;
+  source: string;
+  is_demo: boolean;
+}
+
+export interface AgentTrace {
+  agent_name: string;
+  status: 'COMPLETED' | 'FALLBACK' | 'SKIPPED';
+  execution_time_ms: number;
+  data_source: string;
+  summary: string;
+}
+
+export interface EvidenceDetails {
+  intent_detected: string;
+  datasets_used: string[];
+  timestamps: Record<string, string>;
+  deterministic_score: number;
+  risk_factors: Record<string, any>;
+  observed_vs_forecast: string;
+  demo_vs_live: string;
+  agent_reasoning_flow: string[];
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  risk_level?: string;
+  safety_verdict?: string;
+  evidence?: EvidenceDetails;
+  traces?: AgentTrace[];
+  pfzs?: PFZZone[];
+  route?: RouteComparison;
+}
+
+export interface ChatResponse {
+  direct_answer: string;
+  risk_level: 'LOW' | 'MODERATE' | 'HIGH' | 'EXTREME';
+  safety_verdict: 'SAFE' | 'SAFE_WITH_CAUTION' | 'UNSAFE' | 'HAZARDOUS';
+  recommendation: string;
+  conditions_summary?: Record<string, any>;
+  evidence: EvidenceDetails;
+  agent_traces: AgentTrace[];
+  active_map_layers: string[];
+  suggested_queries: string[];
+  relevant_pfz?: PFZZone[];
+  route_comparison?: RouteComparison;
+  alerts?: MarineAlert[];
+  focus_location: Coordinates;
+}
+
+export interface DataSourceInfo {
+  id: string;
+  name: string;
+  organization: string;
+  dataset_name: string;
+  parameters: string;
+  status: 'LIVE' | 'ACTIVE_DEMO' | 'STANDBY';
+  is_demo: boolean;
+  last_update: string;
+  update_frequency: string;
+  description: string;
+  official_portal: string;
+  config_env_var: string;
+}
+
+export interface CoastalPreset {
+  id: string;
+  name: string;
+  state: string;
+  region: string;
+  latitude: number;
+  longitude: number;
+  harbor: string;
+  key_species: string[];
+}
