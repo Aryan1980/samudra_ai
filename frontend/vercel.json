@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/assets/(.*)",
-      "destination": "/assets/"
+      "destination": "/assets/$1"
     },
     {
       "source": "/((?!assets|favicon|.*\\..*).*)",

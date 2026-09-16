@@ -1,4 +1,4 @@
-﻿import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -31,10 +31,10 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div style={{
           minHeight: '100vh',
-          backgroundColor: '#FFF570',
-          color: '#000000',
+          backgroundColor: '#151926',
+          color: '#f1f5fb',
           padding: '2rem',
-          fontFamily: 'monospace',
+          fontFamily: "'Roboto', sans-serif",
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -43,37 +43,43 @@ export class ErrorBoundary extends Component<Props, State> {
           <div style={{
             maxWidth: '650px',
             width: '100%',
-            border: '3px solid #000000',
-            backgroundColor: '#ffffff',
+            border: '1px solid rgba(83, 121, 174, 0.35)',
+            backgroundColor: '#181e2e',
+            borderRadius: '12px',
             padding: '2rem',
-            boxShadow: '6px 6px 0px 0px #000000'
+            boxShadow: '0 12px 36px rgba(0,0,0,0.5)'
           }}>
             <div style={{
               display: 'inline-block',
-              backgroundColor: '#000000',
-              color: '#FFF570',
-              padding: '4px 10px',
-              fontWeight: 'bold',
-              fontSize: '12px',
-              marginBottom: '1rem'
+              backgroundColor: '#0474C4',
+              color: '#ffffff',
+              padding: '4px 12px',
+              borderRadius: '9999px',
+              fontWeight: 600,
+              fontSize: '11px',
+              letterSpacing: '0.05em',
+              marginBottom: '1rem',
+              fontFamily: "'JetBrains Mono', monospace"
             }}>
               SAMUDRA AI // SYSTEM RECOVERY
             </div>
-            <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 1rem 0' }}>
-              Interface Render Notice
+            <h1 style={{ fontSize: '22px', fontWeight: 700, margin: '0 0 1rem 0', color: '#ffffff' }}>
+              Interface Diagnostic Notice
             </h1>
-            <p style={{ fontSize: '13px', lineHeight: '1.5', marginBottom: '1.5rem' }}>
+            <p style={{ fontSize: '13px', lineHeight: '1.6', marginBottom: '1.5rem', color: '#A8C4EC' }}>
               An interface component encountered an error during initialization. The multi-agent cognition pipeline and edge telemetry remain intact.
             </p>
             {this.state.error && (
               <pre style={{
-                backgroundColor: '#f4f4f4',
-                border: '1px solid #000',
+                backgroundColor: '#0f131d',
+                border: '1px solid rgba(83, 121, 174, 0.25)',
+                borderRadius: '8px',
                 padding: '1rem',
                 fontSize: '11px',
                 overflowX: 'auto',
                 marginBottom: '1.5rem',
-                color: '#b91c1c'
+                color: '#f87171',
+                fontFamily: "'JetBrains Mono', monospace"
               }}>
                 {this.state.error.toString()}
               </pre>
@@ -84,13 +90,16 @@ export class ErrorBoundary extends Component<Props, State> {
                 window.location.reload();
               }}
               style={{
-                backgroundColor: '#000000',
-                color: '#FFF570',
-                border: '2px solid #000000',
-                padding: '10px 20px',
-                fontWeight: 'bold',
+                backgroundColor: '#0474C4',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 22px',
+                fontWeight: 600,
+                fontSize: '12px',
                 cursor: 'pointer',
-                fontFamily: 'monospace'
+                letterSpacing: '0.05em',
+                fontFamily: "'JetBrains Mono', monospace"
               }}
             >
               RELOAD APPLICATION

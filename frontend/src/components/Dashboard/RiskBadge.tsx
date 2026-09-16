@@ -1,106 +1,96 @@
-import { Shield, AlertTriangle, CheckCircle2, Activity } from 'lucide-react';
+import React from 'react';
+import { ShieldCheck, AlertTriangle, Flame, MapPin } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
-export const RiskBadge = () => {
-  const { risk } = useApp();
+export const RiskBadge: React.FC = () => {
+  const { risk, activeLocationName } = useApp();
 
   if (!risk) {
     return (
-      <div className="border-2 border-black bg-[#FFF570]/90 p-4 text-xs text-black flex items-center justify-center h-full min-h-[140px] font-mono">
-        <Activity className="w-4 h-4 text-black animate-spin mr-2" />
-        <span>EVALUATING DETERMINISTIC SAFETY MATRIX...</span>
+      <div className="rounded-xl border border-white/[0.07] bg-[#0a0f1c] h-full flex items-center px-4 py-2.5 gap-3 animate-pulse min-h-[56px]">
+        <div className="skeleton w-8 h-8 rounded-lg flex-shrink-0" />
+        <div className="flex-1 space-y-1">
+          <div className="skeleton h-2 rounded w-28" />
+          <div className="skeleton h-3 rounded w-20" />
+        </div>
       </div>
     );
   }
 
   const score = risk.overall_score;
 
-  const getTheme = (level: string) => {
-    switch (level) {
+  const theme = (() => {
+    switch (risk.risk_level) {
       case 'LOW':
-        return {
-          status: 'SAFE TO SAIL',
-          badgeClass: 'bg-black text-[#FFF570]',
-          icon: CheckCircle2,
-          recommendation: 'All oceanographic and meteorological parameters within safe navigational limits.'
-        };
+        return { stroke: '#34d399', text: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/25', label: 'Safe to Venture', Icon: ShieldCheck };
       case 'MODERATE':
-        return {
-          status: 'PROCEED WITH CAUTION',
-          badgeClass: 'bg-black text-[#FFF570]',
-          icon: AlertTriangle,
-          recommendation: 'Marginal swell or wind conditions detected. Recommend small craft remain within coastal bounds.'
-        };
+        return { stroke: '#fbbf24', text: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/25', label: 'Proceed with Caution', Icon: AlertTriangle };
       case 'HIGH':
-        return {
-          status: 'HIGH RISK // AVOID OFFSHORE',
-          badgeClass: 'bg-black text-rose-300',
-          icon: AlertTriangle,
-          recommendation: 'Adverse sea conditions. Wave or wind speed exceeds safe operating thresholds.'
-        };
+        return { stroke: '#f87171', text: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/25', label: 'High Risk: Stay Ashore', Icon: AlertTriangle };
       default:
-        return {
-          status: 'EXTREME DANGER // NO SAIL',
-          badgeClass: 'bg-black text-rose-400 animate-pulse',
-          icon: Shield,
-          recommendation: 'Gale or cyclone warning active. Immediate harbor return advised.'
-        };
+        return { stroke: '#f43f5e', text: 'text-rose-300', bg: 'bg-rose-950/60', border: 'border-rose-500/30', label: 'Severe Hazard', Icon: Flame };
     }
-  };
+  })();
 
-  const theme = getTheme(risk.risk_level);
-  const IconComponent = theme.icon;
+  const { Icon } = theme;
+  const radius = 18;
+  const circ = 2 * Math.PI * radius;
+  const offset = circ - (score / 100) * (circ * 0.75);
 
   return (
-    <div className="border-2 border-black bg-[#FFF570]/90 p-4 flex flex-col justify-between h-full font-mono shadow-[3px_3px_0px_0px_#000]">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-black pb-2 mb-2">
-        <div className="flex items-center gap-1.5 font-bold text-xs uppercase text-black">
-          <IconComponent className="w-4 h-4 text-black" />
-          <span>DETERMINISTIC SAFETY MATRIX</span>
+    <div className="rounded-xl border border-white/[0.07] bg-[#0a0f1c] flex items-center gap-3 px-4 py-2.5 overflow-hidden h-full">
+
+      {/* Mini Arc Gauge */}
+      <div className="relative w-12 h-12 flex-shrink-0 flex items-center justify-center">
+        <svg className="w-full h-full -rotate-[135deg]" viewBox="0 0 44 44">
+          <circle cx="22" cy="22" r={radius}
+            stroke="rgba(255,255,255,0.05)" strokeWidth="4" fill="none"
+            strokeDasharray={`${circ * 0.75} ${circ * 0.25}`}
+          />
+          <circle cx="22" cy="22" r={radius}
+            stroke={theme.stroke} strokeWidth="4" strokeLinecap="round" fill="none"
+            strokeDasharray={`${circ * 0.75} ${circ * 0.25}`}
+            style={{ strokeDashoffset: offset, transition: 'stroke-dashoffset 0.8s ease' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="font-mono text-[11px] font-bold text-white leading-none">{score}</span>
         </div>
-        <span className="text-[9px] border border-black px-1.5 py-0.5 font-bold bg-white/70">
-          PHYS_ENGINE
-        </span>
       </div>
 
-      {/* Main Score Display */}
-      <div className="flex items-baseline justify-between my-2">
-        <div>
-          <div className="text-[10px] text-black/70 uppercase font-semibold">OVERALL RISK INDEX</div>
-          <div className="flex items-baseline gap-1">
-            <span className="font-bebas text-5xl font-black text-black leading-none">
-              {score}
-            </span>
-            <span className="text-black/60 text-sm font-bold">/ 100</span>
+      {/* Status */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <span className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md border ${theme.text} ${theme.bg} ${theme.border}`}>
+            <Icon className="w-3 h-3" />
+            {theme.label}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 text-[10px] text-slate-500">
+          <MapPin className="w-3 h-3 text-cyan-500/60" />
+          <span className="truncate max-w-[160px]">{activeLocationName.split(',')[0]}</span>
+          <span className="text-slate-600">· Risk score {score}/100</span>
+        </div>
+      </div>
+
+      {/* Top 2 factor mini bars */}
+      <div className="hidden lg:flex flex-col gap-1 flex-shrink-0 w-28">
+        {risk.factors.slice(0, 2).map((f) => (
+          <div key={f.factor_name} className="flex items-center gap-1.5 text-[10px]">
+            <span className="text-slate-500 truncate w-14">{f.factor_name.split(' ')[0]}</span>
+            <div className="flex-1 bg-white/[0.04] rounded-full h-[3px]">
+              <div
+                className={`h-full rounded-full ${
+                  f.severity === 'LOW' ? 'bg-emerald-400' :
+                  f.severity === 'MODERATE' ? 'bg-amber-400' : 'bg-rose-500'
+                }`}
+                style={{ width: `${Math.min(100, Math.max(4, f.score))}%` }}
+              />
+            </div>
           </div>
-        </div>
-
-        <div className={`px-3 py-1.5 text-xs font-bold font-mono uppercase border-2 border-black ${theme.badgeClass}`}>
-          {theme.status}
-        </div>
+        ))}
       </div>
 
-      {/* Multi-Factor Breakdown */}
-      <div className="space-y-1.5 my-2 border-t border-b border-black/30 py-2 text-[10px]">
-        {risk.factors && risk.factors.length > 0 ? (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            {risk.factors.slice(0, 4).map((f, i) => (
-              <div key={i} className="flex justify-between">
-                <span className="truncate uppercase">{f.factor_name}:</span>
-                <span className="font-bold">{f.score}/100</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-[10px] text-black/70">ALL METEOROLOGICAL FACTORS EVALUATED</div>
-        )}
-      </div>
-
-      {/* Recommendation Note */}
-      <div className="text-[10px] text-black/85 leading-tight italic">
-        "{risk.recommendation || theme.recommendation}"
-      </div>
     </div>
   );
 };

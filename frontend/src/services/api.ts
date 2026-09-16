@@ -11,26 +11,7 @@ import {
   DataSourceInfo
 } from '../types/marine';
 
-const getInitialBaseUrl = (): string => {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-  if (typeof window !== 'undefined') {
-    // If running on Vite dev server with proxy (typically :5173), use relative /api
-    // If running on backend server (typically :8000), use relative /api
-    // If deployed on Vercel / custom domain, use relative /api
-    const isViteDev = window.location.port === '5173';
-    if (isViteDev) {
-      return '/api';
-    }
-    return '/api';
-  }
-  return 'http://127.0.0.1:8000/api';
-};
-
-const API_BASE = getInitialBaseUrl();
-
-export const getApiBaseUrl = () => API_BASE;
+const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 
 const client = axios.create({
   baseURL: API_BASE,
@@ -39,31 +20,6 @@ const client = axios.create({
     'Content-Type': 'application/json',
   },
 });
-
-// Fallback interceptor: If relative /api fails on dev with connection refused, try direct 127.0.0.1:8000/api
-client.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const config = error.config;
-    if (!config || config.__isRetry) {
-      return Promise.reject(error);
-    }
-
-    // If request failed on /api due to Vite proxy not reaching backend, try direct localhost backend
-    if (
-      typeof window !== 'undefined' &&
-      window.location.port === '5173' &&
-      config.baseURL === '/api' &&
-      (!error.response || error.code === 'ERR_NETWORK')
-    ) {
-      config.__isRetry = true;
-      config.baseURL = 'http://127.0.0.1:8000/api';
-      return axios(config);
-    }
-
-    return Promise.reject(error);
-  }
-);
 
 export const api = {
   async sendChat(query: string, coords: Coordinates, language: string = 'en', activeLayers: string[] = []): Promise<ChatResponse> {
@@ -133,8 +89,7 @@ export const api = {
   },
 
   async checkHealth() {
-    const res = await client.get('/health', { timeout: 4000 });
+    const res = await client.get('/health');
     return res.data;
   }
 };
-

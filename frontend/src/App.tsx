@@ -1,111 +1,127 @@
+import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
-import { Header } from './components/Header/Header';
-import { SamudraHero } from './components/Hero/SamudraHero';
+import { Sidebar } from './components/Navigation/Sidebar';
 import { MarineMap } from './components/Map/MarineMap';
-import { ChatPanel } from './components/Chat/ChatPanel';
-import { MarineCards } from './components/Dashboard/MarineCards';
-import { RiskBadge } from './components/Dashboard/RiskBadge';
-import { PFZList } from './components/Dashboard/PFZList';
-import { AlertCenter } from './components/Dashboard/AlertCenter';
-import { AgentTracePanel } from './components/Observability/AgentTracePanel';
-import { ArchitectureView } from './components/Pages/ArchitectureView';
-import { DataSourcesView } from './components/Pages/DataSourcesView';
-import { MarineTrendsModal } from './components/Charts/MarineTrendsModal';
+import { LocationAnalyticsView } from './components/Dashboard/LocationAnalyticsView';
+import { FishingSpotsView } from './components/Dashboard/FishingSpotsView';
+import { AIAssistantView } from './components/Chat/AIAssistantView';
+import { SettingsModal } from './components/Dashboard/SettingsModal';
+import { LocationSetupView } from './components/Onboarding/LocationSetupView';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { Sun, MapPin, Layers } from 'lucide-react';
 
-const MainContent = () => {
-  const { activeTab } = useApp();
+const DashboardView: React.FC = () => {
+  const { activeLocationName, weather, resetLocation } = useApp();
+  const [activeNav, setActiveNav] = useState<string>('map');
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
+
+  const tempVal = weather?.temperature_c ?? 28.4;
 
   return (
-    <div className="flex-1 flex flex-col min-h-screen">
-      {/* Top Editorial Metadata Navigation Header */}
-      <Header />
+    <div className="flex h-screen w-screen overflow-hidden bg-[#151926] text-[#f1f5fb] selection:bg-[#0474C4]/30 selection:text-[#A8C4EC] font-roboto">
+      
+      {/* ── 1. Left Vertical Navigation Rail (Modern Image 2 Style) ── */}
+      <Sidebar
+        activeNav={activeNav}
+        setActiveNav={setActiveNav}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+      />
 
-      <main className="flex-1 p-4 md:p-6 space-y-6 max-w-[1700px] mx-auto w-full">
-        
-        {/* Cover Hero Banner Replicating Image 1 (Always visible or in Command Deck) */}
-        <SamudraHero />
+      {/* ── 2. Settings & Overlays Modal ── */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
 
-        {/* Spread 00: Command Deck */}
-        {activeTab === 'command' && (
-          <div className="space-y-6">
-            {/* Top Row: Key Marine Metrics Cards & Deterministic Risk Gauge */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-              <div className="lg:col-span-8 flex flex-col justify-between">
-                <MarineCards />
-              </div>
-              <div className="lg:col-span-4">
-                <RiskBadge />
-              </div>
+      {/* ── 3. Main Viewport Area (Dedicated Views for each Navigation Item) ── */}
+      <div className="flex-1 h-screen flex flex-col overflow-hidden relative">
+
+        {/* ── Top Shared Minimalist Header Bar ── */}
+        <header className="h-14 px-6 bg-[#181e2e]/95 backdrop-blur-md border-b border-[#5379AE]/25 flex items-center justify-between z-20 flex-shrink-0 shadow-sm">
+          
+          {/* Breadcrumb Path */}
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-[#A8C4EC]/75 font-medium">SamudraAI</span>
+            <span className="text-[#5379AE]">/</span>
+            <span className="text-white font-semibold tracking-tight">
+              {activeNav === 'map' && 'Satellite Recon & Navigation'}
+              {activeNav === 'analytics' && 'Port & Ocean Telemetry'}
+              {activeNav === 'spots' && 'Potential Fishing Grounds & Seaward Routes'}
+              {activeNav === 'assistant' && 'Conversational AI Helmsman'}
+            </span>
+          </div>
+
+          {/* Right Header Controls */}
+          <div className="flex items-center gap-4 text-xs">
+            
+            {/* Active Port Chip */}
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#151926] border border-[#5379AE]/30 text-[#A8C4EC] font-mono">
+              <MapPin className="w-3.5 h-3.5 text-[#0474C4]" />
+              <span className="truncate max-w-[180px] sm:max-w-[240px] font-medium text-white">{activeLocationName}</span>
             </div>
 
-            {/* Core Interactive Section: Marine Leaflet Map (Left) + Multi-Turn Agentic Chat (Right) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[550px]">
-              {/* Map: 7 cols on desktop */}
-              <div className="lg:col-span-7 h-[550px]">
-                <ErrorBoundary>
-                  <MarineMap />
-                </ErrorBoundary>
-              </div>
-
-              {/* Conversational Assistant: 5 cols on desktop */}
-              <div className="lg:col-span-5 h-[550px]">
-                <ChatPanel />
-              </div>
+            {/* Date & Weather Indicator */}
+            <div className="flex items-center gap-1.5 text-[#A8C4EC] font-mono hidden sm:flex">
+              <Sun className="w-4 h-4 text-amber-400" />
+              <span className="font-semibold text-white">{tempVal}°C</span>
+              <span className="text-[#5379AE]">· Today</span>
             </div>
+          </div>
+        </header>
 
-            {/* Tactical Panels: Ranked PFZs (Left) + Active Alerts (Right) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-              <div className="min-h-72">
-                <PFZList />
-              </div>
-              <div className="min-h-72">
-                <AlertCenter />
-              </div>
+        {/* ── Viewport Contents by Active Tab ── */}
+        <div className="flex-1 relative overflow-hidden">
+          
+          {/* Option A: Dedicated Satellite Map View (Persisted in DOM for instant cache & route persistence) */}
+          <div className={activeNav === 'map' ? 'absolute inset-0 w-full h-full' : 'hidden'}>
+            <ErrorBoundary>
+              <MarineMap />
+            </ErrorBoundary>
+          </div>
+
+          {/* Option B: Dedicated Location Analytics View */}
+          {activeNav === 'analytics' && (
+            <div className="h-full w-full overflow-y-auto">
+              <LocationAnalyticsView />
             </div>
+          )}
 
-            {/* Live Observability / Multi-Agent Telemetry Bar */}
-            <AgentTracePanel />
-          </div>
-        )}
+          {/* Option C: Dedicated Fishing Spots & Routes View */}
+          {activeNav === 'spots' && (
+            <div className="h-full w-full overflow-y-auto">
+              <FishingSpotsView onViewOnMap={() => setActiveNav('map')} />
+            </div>
+          )}
 
-        {/* Spread 01: 24h Trends */}
-        {activeTab === 'trends' && <MarineTrendsModal />}
+          {/* Option D: Dedicated AI Assistant View */}
+          {activeNav === 'assistant' && (
+            <div className="h-full w-full overflow-hidden">
+              <AIAssistantView />
+            </div>
+          )}
 
-        {/* Spread 02: Data Sources Provenance */}
-        {activeTab === 'data_sources' && <DataSourcesView />}
-
-        {/* Spread 03: System Architecture Blueprint */}
-        {activeTab === 'architecture' && <ArchitectureView />}
-
-      </main>
-
-      {/* Editorial Colophon Footer */}
-      <footer className="bg-[#FFF570] border-t-2 border-black py-4 px-4 md:px-8 text-black font-mono text-xs select-none">
-        <div className="max-w-[1700px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-black inline-block"></span>
-            <span className="font-bold">SAMUDRA AI // VOL. 02</span>
-            <span>— OPERATIONAL DECISION-SUPPORT FOR ISRO EVALUATION</span>
-          </div>
-          <div className="flex items-center gap-4 text-[11px] text-black/80 font-bold">
-            <span>DETERMINISTIC SAFETY GROUNDING</span>
-            <span>•</span>
-            <span>LAT 18.9220° N, LON 72.8347° E</span>
-          </div>
         </div>
-      </footer>
+
+      </div>
+
     </div>
   );
+};
+
+const MainContent: React.FC = () => {
+  const { isLocationSelected } = useApp();
+  return isLocationSelected ? <DashboardView /> : <LocationSetupView />;
 };
 
 export default function App() {
   return (
     <ErrorBoundary>
       <AppProvider>
-        <div className="min-h-screen bg-[#FFF570] text-black flex flex-col font-mono selection:bg-black selection:text-[#FFF570]">
-          <MainContent />
-        </div>
+        <MainContent />
       </AppProvider>
     </ErrorBoundary>
   );

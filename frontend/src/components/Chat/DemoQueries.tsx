@@ -1,42 +1,31 @@
-import { Sparkles } from 'lucide-react';
+import React from 'react';
 import { useApp } from '../../context/AppContext';
 
 const DEMO_QUERIES = [
-  { id: '1', text: 'Where is the nearest PFZ?', tag: 'PFZ' },
-  { id: '2', text: 'Is it safe to go fishing tomorrow morning?', tag: 'SAFETY' },
-  { id: '3', text: 'What are the wave and wind conditions?', tag: 'WEATHER' },
-  { id: '4', text: 'Show areas with high chlorophyll and favourable SST.', tag: 'OCEAN' },
-  { id: '5', text: 'Which PFZ is safest?', tag: 'RANKING' },
-  { id: '6', text: 'Find a safe route to the nearest PFZ.', tag: 'ROUTE' },
-  { id: '7', text: 'Are there any cyclone or lightning alerts?', tag: 'ALERTS' },
-  { id: '8', text: 'Am I approaching a restricted area?', tag: 'GEOFENCE' },
+  'Where is the nearest PFZ?',
+  'Is it safe to go fishing tomorrow morning?',
+  'What are the wave and wind conditions?',
+  'Show areas with high chlorophyll and favourable SST',
+  'Which PFZ is safest?',
+  'Find a safe route to the nearest PFZ',
+  'Are there any cyclone or lightning alerts?',
+  'Am I approaching a restricted area?'
 ];
 
-export const DemoQueries = () => {
+export const DemoQueries: React.FC = () => {
   const { sendQuery, isAnalyzing } = useApp();
 
   return (
-    <div className="border-b-2 border-black bg-[#FFF570] p-2 select-none">
-      <div className="flex items-center justify-between gap-2 mb-1.5 px-1 font-mono">
-        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-black font-bold">
-          <Sparkles className="w-3 h-3 text-black" />
-          <span>ISRO DEMO TELEMETRY QUERIES</span>
-        </div>
-        <span className="text-[9px] text-black/60 hidden sm:inline">1-CLICK EXECUTION</span>
-      </div>
-
-      <div className="flex gap-1.5 overflow-x-auto pb-1 font-mono text-[10px]">
+    <div className="border-b border-white/[0.06] bg-[#070a12]/60 px-3 py-2">
+      <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar">
         {DEMO_QUERIES.map((q) => (
           <button
-            key={q.id}
+            key={q}
             disabled={isAnalyzing}
-            onClick={() => sendQuery(q.text)}
-            className="flex-shrink-0 text-left px-2.5 py-1 border border-black bg-white hover:bg-black hover:text-[#FFF570] transition-colors flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
+            onClick={() => sendQuery(q)}
+            className="flex-shrink-0 text-left text-[11px] px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] hover:border-white/[0.15] text-slate-300 hover:text-white transition-all duration-150 whitespace-nowrap disabled:opacity-40 cursor-pointer font-medium"
           >
-            <span className="font-bold border border-current px-1 py-0.2 text-[8px] bg-black text-[#FFF570]">
-              {q.tag}
-            </span>
-            <span className="truncate max-w-[150px] font-semibold">{q.text}</span>
+            {q}
           </button>
         ))}
       </div>
