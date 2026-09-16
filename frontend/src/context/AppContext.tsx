@@ -12,7 +12,7 @@ import {
   AgentTrace,
   CoastalPreset
 } from '../types/marine';
-import { api } from '../services/api';
+import { api, generateFallbackPFZs } from '../services/api';
 import { voiceService } from '../services/voice';
 
 export interface AppContextType {
@@ -70,7 +70,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [weather, setWeather] = useState<WeatherReport | null>(null);
   const [ocean, setOcean] = useState<MarineObservation | null>(null);
   const [risk, setRisk] = useState<RiskAssessment | null>(null);
-  const [pfzs, setPfzs] = useState<PFZZone[]>([]);
+  const [pfzs, setPfzs] = useState<PFZZone[]>(() => generateFallbackPFZs(DEFAULT_COORDS));
   const [alerts, setAlerts] = useState<MarineAlert[]>([]);
   const [routeComparison, setRouteComparison] = useState<RouteComparison | null>(null);
   const [selectedPFZForRoute, setSelectedPFZForRoute] = useState<PFZZone | null>(null);
@@ -104,15 +104,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const refreshConditions = async (loc = activeLocation) => {
     setIsAnalyzing(true);
     try {
-      const data = await api.getMarineConditions(loc);
-      setWeather(data.weather);
-      setOcean(data.ocean);
-      setRisk(data.risk);
-      setAlerts(data.active_alerts || []);
-      const pfzList = await api.getPFZs(loc);
-      setPfzs(pfzList);
+      const [conditionsRes, pfzRes] = await Promise.allSettled([
+        api.getMarineConditions(loc),
+        api.getPFZs(loc)
+      ]);
+
+      if (conditionsRes.status === 'fulfilled' && conditionsRes.value) {
+        const data = conditionsRes.value;
+        setWeather(data.weather);
+        setOcean(data.ocean);
+        setRisk(data.risk);
+        setAlerts(data.active_alerts || []);
+      }
+
+      if (pfzRes.status === 'fulfilled' && pfzRes.value && pfzRes.value.length > 0) {
+        setPfzs(pfzRes.value);
+      } else {
+        setPfzs((prev) => (prev.length > 0 ? prev : generateFallbackPFZs(loc)));
+      }
     } catch (err) {
-      console.error('Failed to refresh marine conditions:', err);
+      console.warn('Notice refreshing marine conditions:', err);
+      setPfzs((prev) => (prev.length > 0 ? prev : generateFallbackPFZs(loc)));
     } finally {
       setIsAnalyzing(false);
     }
@@ -131,6 +143,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else {
       setActiveLocationName(`${coords.latitude.toFixed(4)}°N, ${coords.longitude.toFixed(4)}°E`);
     }
+    setPfzs(generateFallbackPFZs(coords));
     setIsLocationSelected(true);
   };
 
