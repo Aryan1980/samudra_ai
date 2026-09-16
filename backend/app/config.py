@@ -53,6 +53,7 @@ class Settings(BaseModel):
     WEATHER_API_KEY: str = os.getenv("WEATHER_API_KEY", "")
     MAP_API_KEY: str = os.getenv("MAP_API_KEY", "")
     OPENWEATHER_API_KEY: str = os.getenv("OPENWEATHER_API_KEY", os.getenv("MAP_API_KEY", ""))
+    STORMGLASS_API_KEY: str = os.getenv("STORMGLASS_API_KEY", os.getenv("OCEAN_API_KEY", ""))
     SATELLITE_API_KEY: str = os.getenv("SATELLITE_API_KEY", "")
     OCEAN_API_KEY: str = os.getenv("OCEAN_API_KEY", "")
 

@@ -1,7 +1,42 @@
-﻿venv/
+﻿# Environment & Secrets (NEVER COMMIT SENSITIVE KEYS)
 .env
-.env.*
-node_modules/
+.env.local
+.env.*.local
+*.env
+
+# Python
 __pycache__/
-*.pyc
-.git_backup/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+*.db
+*.sqlite3
+samudra_marine.db
+backend/samudra_marine.db
+backend/samudra_ai.db
+
+# Pytest & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / Frontend
+frontend/node_modules/
+node_modules/
+frontend/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

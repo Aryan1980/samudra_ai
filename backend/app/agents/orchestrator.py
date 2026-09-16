@@ -51,13 +51,13 @@ class AgentOrchestrator:
 
         # 2. Planner Agent
         p_t0 = time.perf_counter()
-        plan = await self.planner.plan_query_agentic(req.query, coords, lang_override=req.language)
+        plan = self.planner.plan_query(req.query, coords, lang_override=req.language)
         p_dur = int((time.perf_counter() - p_t0) * 1000)
         traces.append(AgentTrace(
             agent_name="Planner Agent",
             status="COMPLETED",
             execution_time_ms=max(1, p_dur),
-            data_source="Autonomous LLM Subtask Decomposer & Intent Classifier",
+            data_source="Rule-Based Intent Classifier & Context Engine",
             summary=f"Detected intent '{plan.intent}' with {len(plan.subtasks)} subtasks. Dispatched {len(plan.required_agents)} agents."
         ))
 
@@ -168,7 +168,6 @@ class AgentOrchestrator:
             query=req.query,
             intent=plan.intent,
             lang=plan.language,
-            coords=coords,
             risk=risk,
             weather=weather,
             ocean=ocean,

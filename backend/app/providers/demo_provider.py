@@ -9,7 +9,6 @@ from app.schemas.data_sources import DataSourceInfo
 from app.geo.calculations import haversine_distance, calculate_bearing, destination_point
 from app.geo.geofence import is_point_in_polygon, distance_to_polygon
 from app.geo.boundaries import MARINE_PROTECTED_AREAS, RESTRICTED_ZONES, IMBL_BOUNDARIES, COASTAL_PRESETS
-from app.geo.coastline import get_seaward_baseline
 
 class DemoDataProvider(MarineDataProvider):
     """Generates realistic oceanographic, atmospheric, and navigational data for ISRO evaluation."""
@@ -167,8 +166,72 @@ class DemoDataProvider(MarineDataProvider):
         )
 
     async def get_ocean_conditions(self, coords: Coordinates) -> MarineObservation:
+        import httpx
+        from app.config import settings
+
         lat, lon = coords.latitude, coords.longitude
-        
+
+        # 1. Check for Live StormGlass Marine API credentials
+        sg_key = settings.STORMGLASS_API_KEY or settings.OCEAN_API_KEY
+        if sg_key:
+            try:
+                headers = {"Authorization": sg_key}
+                params = {
+                    "lat": coords.latitude,
+                    "lng": coords.longitude,
+                    "params": "waterTemperature,waveHeight,waveDirection,currentSpeed,currentDirection"
+                }
+                async with httpx.AsyncClient(timeout=6.0) as client:
+                    resp = await client.get("https://api.stormglass.io/v2/weather/point", headers=headers, params=params)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        hours = data.get("hours", [])
+                        if hours:
+                            h0 = hours[0]
+                            def _val(d, default_val):
+                                if isinstance(d, dict):
+                                    for src in ["sg", "meto", "ecmwf", "noaa", "dwd"]:
+                                        if src in d and d[src] is not None:
+                                            return float(d[src])
+                                    for v in d.values():
+                                        if v is not None:
+                                            return float(v)
+                                elif d is not None:
+                                    return float(d)
+                                return default_val
+
+                            live_sst = round(_val(h0.get("waterTemperature"), 28.2), 1)
+                            live_wave_h = round(_val(h0.get("waveHeight"), 1.1), 1)
+                            live_wave_dir = round(_val(h0.get("waveDirection"), 225.0), 1)
+                            live_current_speed = round(_val(h0.get("currentSpeed"), 0.2) * 3.6, 2)
+
+                            coast_proximity = min(abs(lon - 72.8), abs(lon - 80.2), abs(lat - 8.1))
+                            chlorophyll = round(max(0.4, min(4.2, 2.4 / (1.0 + coast_proximity * 0.8))), 2)
+                            tide_states = ["Rising Tide (Flood)", "High Tide (Slack)", "Falling Tide (Ebb)", "Low Tide"]
+                            tide_idx = int((lat * 10 + lon * 5) % 4)
+
+                            sea_state = "Calm to Slight (< 1.25m)" if live_wave_h < 1.25 else "Moderate (1.25m - 2.5m)" if live_wave_h < 2.5 else "Rough (> 2.5m)"
+
+                            return MarineObservation(
+                                location=coords,
+                                timestamp=self._get_utc_now(),
+                                sst=live_sst,
+                                chlorophyll=chlorophyll,
+                                wave_height=live_wave_h,
+                                wave_direction=live_wave_dir,
+                                wind_speed=18.0,
+                                wind_direction=round((live_wave_dir + 10) % 360, 1),
+                                rainfall=0.0,
+                                tide=tide_states[tide_idx],
+                                tide_height_m=round(1.4 + 0.6 * math.sin(lat * 1.5), 2),
+                                sea_state=sea_state,
+                                source="StormGlass.io Marine & Satellite Feed (Live NOAA/ECMWF)",
+                                data_type="satellite_marine_live",
+                                is_demo=False
+                            )
+            except Exception:
+                pass
+
         # Sea Surface Temperature (SST) in Indian waters: typically 27.5 - 30.2 C
         sst = round(28.4 + 0.8 * math.sin(lat * 0.5) - 0.4 * math.cos(lon * 0.3), 1)
         
@@ -206,128 +269,68 @@ class DemoDataProvider(MarineDataProvider):
         )
 
     async def get_pfz_advisories(self, coords: Coordinates, radius_km: float = 120.0) -> List[PFZZone]:
-        """Generate 8 realistic PFZ zones calibrated to the fisherman's departure location.
-        Uses coastal geometry baseline to guarantee spots are strictly in open sea water,
-        never on land, islands, estuaries, or backwaters."""
+        # Generate 4 distinct, realistic PFZs displaced around the user's sea coordinates
         lat, lon = coords.latitude, coords.longitude
         results: List[PFZZone] = []
 
-        # 1. Determine seaward baseline from coastline engine
-        baseline = get_seaward_baseline(lat, lon)
-        orig_lat = baseline["origin_lat"]
-        orig_lon = baseline["origin_lon"]
-
-        # Generous angular and distance separation (in km) to ensure clean map visibility with zero pin overlap
-        is_west = lon < 78.0
-        if is_west:
-            bearings = [265, 295, 235, 280, 225, 308, 250, 275]
-        else:
-            bearings = [90, 65, 120, 80, 135, 55, 105, 95]
-
-        offsets = [0.6, 2.2, 4.2, 6.8, 9.8, 13.5, 17.5, 22.5]
-
-        zone_data = [
-            {
-                "name": "Chlorophyll Bloom Alpha",
-                "sst_offset": 0.0,
-                "chl_base": 3.4,
-                "suitability": 94,
-                "note": "High-density chlorophyll bloom. Ideal for sardine & mackerel near the thermal front."
-            },
-            {
-                "name": "Coastal Upwelling Beta",
-                "sst_offset": -0.4,
-                "chl_base": 3.0,
-                "suitability": 90,
-                "note": "Active upwelling. Rich nutrient surge supporting anchovy and scad aggregations."
-            },
-            {
-                "name": "SST Gradient Gamma",
-                "sst_offset": -0.7,
-                "chl_base": 2.7,
-                "suitability": 87,
-                "note": "Optimal SST gradient (ΔT=0.8°C). Pelagic tuna and kingfish likely present."
-            },
-            {
-                "name": "Thermal Convergence Delta",
-                "sst_offset": -1.0,
-                "chl_base": 2.3,
-                "suitability": 83,
-                "note": "Convergence zone. Mixed pelagic aggregation. Suitable for gill-net operations."
-            },
-            {
-                "name": "Mid-Shelf Break Epsilon",
-                "sst_offset": -1.2,
-                "chl_base": 2.0,
-                "suitability": 79,
-                "note": "Mid-shelf break. Good for trawling. Monitor wave height before departure."
-            },
-            {
-                "name": "Offshore Front Zeta",
-                "sst_offset": -1.5,
-                "chl_base": 1.8,
-                "suitability": 74,
-                "note": "Moderate chlorophyll. Suitable for experienced offshore fishermen with larger craft."
-            },
-            {
-                "name": "Pelagic Trench Eta",
-                "sst_offset": -1.7,
-                "chl_base": 1.6,
-                "suitability": 70,
-                "note": "Scattered pelagic activity. Long transit; plan fuel and provisions accordingly."
-            },
-            {
-                "name": "Deep Shelf Break Theta",
-                "sst_offset": -2.0,
-                "chl_base": 1.4,
-                "suitability": 65,
-                "note": "Shelf-break edge. Not recommended for craft under 20 ft. Check cyclone advisories."
-            },
+        # Vector bearings (typically seaward, away from coast)
+        # For West coast (lon < 78), seaward is W/SW/NW; For East coast (lon >= 78), seaward is E/SE/NE
+        seaward_bearings = [240, 270, 290, 210] if lon < 78.0 else [70, 90, 120, 150]
+        distances = [18.5, 31.0, 47.5, 68.0]
+        names = [
+            "Thermal-Chlorophyll Frontal Zone Alpha",
+            "Oceanic Frontal Convergence Bravo",
+            "Shelf-Break Upwelling Patch Charlie",
+            "Coastal Eddy Pelagic Zone Delta"
         ]
 
-        # Baseline SST from ocean latitude model
-        import math
-        base_sst = 28.2 + 0.5 * math.sin(math.radians(lat * 10))
-
-        for i, (bearing, off_dist, zd) in enumerate(zip(bearings, offsets, zone_data)):
-            # Generate spot position offshore
-            pfz_lat, pfz_lon = destination_point(orig_lat, orig_lon, off_dist, bearing)
-
-            # True transit distance and compass bearing from vessel departure point
-            transit_dist = haversine_distance(lat, lon, pfz_lat, pfz_lon)
+        for i in range(4):
+            bearing = seaward_bearings[i]
+            dist = distances[i]
+            pfz_lat, pfz_lon = destination_point(lat, lon, dist, bearing)
             b_deg, b_comp = calculate_bearing(lat, lon, pfz_lat, pfz_lon)
 
-            sst = round(base_sst + zd["sst_offset"], 1)
-            chl = round(zd["chl_base"], 2)
-            suitability = zd["suitability"]
+            # High suitability corresponds to cool thermal anomaly + high chlorophyll
+            sst = round(28.2 - (i * 0.3), 1)
+            chl = round(2.8 - (i * 0.4), 2)
+            suitability = round(92.0 - (i * 8.5), 1)
 
-            # Safety tier based on transit distance and sea exposure
-            safety_rating = "SAFE" if transit_dist <= 24.0 else "CAUTION" if transit_dist <= 36.0 else "AVOID"
+            # Check safety against distance and weather
+            safety_rating = "SAFE" if dist < 35.0 else "CAUTION" if dist < 55.0 else "AVOID"
+            recommendation = (
+                "Highly Recommended: Optimal SST gradient (?T=0.8?C) with rich chlorophyll front."
+                if i == 0 else
+                "Favourable: Strong pelagic aggregation signs. Maintain standard navigational watch."
+                if i == 1 else
+                "Moderate Suitability: Distant offshore zone; monitor wind gusts before departure."
+                if i == 2 else
+                "Not Recommended for Small Crafts: Long transit distance into deeper oceanic waters."
+            )
 
-            # Tight polygon contour (~1.6km radius) strictly in open ocean
+            # Small 4-point polygon around PFZ coordinate
             poly = [
-                [round(pfz_lat + 0.014, 4), round(pfz_lon - 0.014, 4)],
-                [round(pfz_lat + 0.014, 4), round(pfz_lon + 0.014, 4)],
-                [round(pfz_lat - 0.014, 4), round(pfz_lon + 0.014, 4)],
-                [round(pfz_lat - 0.014, 4), round(pfz_lon - 0.014, 4)],
-                [round(pfz_lat + 0.014, 4), round(pfz_lon - 0.014, 4)]
+                [pfz_lat + 0.04, pfz_lon - 0.04],
+                [pfz_lat + 0.04, pfz_lon + 0.04],
+                [pfz_lat - 0.04, pfz_lon + 0.04],
+                [pfz_lat - 0.04, pfz_lon - 0.04],
+                [pfz_lat + 0.04, pfz_lon - 0.04]
             ]
 
             results.append(PFZZone(
-                id=f"spot_{i+1}",
-                name=f"Spot {i+1}: {zd['name']}",
-                location=Coordinates(latitude=round(pfz_lat, 4), longitude=round(pfz_lon, 4)),
+                id=f"pfz_{int(lat*100)}_{int(lon*100)}_{i+1}",
+                name=names[i],
+                location=Coordinates(latitude=pfz_lat, longitude=pfz_lon),
                 polygon=poly,
-                distance_km=round(transit_dist, 1),
+                distance_km=round(dist, 1),
                 bearing_deg=b_deg,
                 bearing_compass=b_comp,
                 sst_c=sst,
                 chlorophyll_mg_m3=chl,
-                suitability_score=float(suitability),
+                suitability_score=suitability,
                 safety_rating=safety_rating,
-                recommendation=zd["note"],
+                recommendation=recommendation,
                 avoids=(safety_rating == "AVOID"),
-                source="INCOIS PFZ Advisory / Oceansat-3 OCM-3 (Synthetic)",
+                source="INCOIS PFZ Multilingual Advisory (Synthetic Demo)",
                 is_demo=True
             ))
 

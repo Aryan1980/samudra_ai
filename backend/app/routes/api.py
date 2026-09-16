@@ -17,8 +17,7 @@ from app.agents.pfz import PFZIntelligenceAgent
 from app.agents.risk import RiskAssessmentAgent
 from app.agents.route import RouteOptimizationAgent
 from app.database import save_message, get_conversation_history
-
-router = APIRouter(prefix="/api")
+router = APIRouter()
 
 provider = DemoDataProvider()
 orchestrator = AgentOrchestrator()

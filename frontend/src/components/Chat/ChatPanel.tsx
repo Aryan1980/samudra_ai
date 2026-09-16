@@ -1,13 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type FormEvent } from 'react';
 import {
   Send,
   Mic,
   MicOff,
   Bot,
   User,
-  HelpCircle,
   Shield,
-  Volume2,
   Activity
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -16,12 +14,11 @@ import { EvidenceDrawer } from './EvidenceDrawer';
 import { voiceService } from '../../services/voice';
 import { EvidenceDetails, AgentTrace } from '../../types/marine';
 
-export const ChatPanel: React.FC = () => {
+export const ChatPanel = () => {
   const {
     chatMessages,
     isAnalyzing,
     language,
-    soundEnabled,
     sendQuery
   } = useApp();
 
@@ -35,7 +32,7 @@ export const ChatPanel: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, isAnalyzing]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!inputQuery.trim() || isAnalyzing) return;
     const q = inputQuery;
@@ -68,13 +65,13 @@ export const ChatPanel: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#090d16] rounded-2xl border border-white/[0.07] overflow-hidden">
+    <div className="flex flex-col h-full border-2 border-black bg-[#FFF570]/90 shadow-[4px_4px_0px_0px_#000000] overflow-hidden font-mono text-xs">
       
-      {/* 1. Minimalist Query Suggestions */}
+      {/* 1. Interactive Demo Scenarios Ribbon */}
       <DemoQueries />
 
       {/* 2. Messages Stream */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-3.5 text-xs">
+      <div className="flex-1 p-4 overflow-y-auto space-y-4">
         {chatMessages.map((msg) => {
           const isUser = msg.role === 'user';
           return (
@@ -82,73 +79,62 @@ export const ChatPanel: React.FC = () => {
               key={msg.id}
               className={`flex items-start gap-2.5 ${isUser ? 'flex-row-reverse' : ''}`}
             >
-              {/* Avatar */}
+              {/* Avatar Stamp */}
               <div
-                className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs ${
+                className={`w-7 h-7 border-2 border-black flex items-center justify-center flex-shrink-0 font-bold ${
                   isUser
-                    ? 'bg-white/10 text-white'
-                    : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+                    ? 'bg-black text-[#FFF570]'
+                    : 'bg-white text-black'
                 }`}
               >
-                {isUser ? <User className="w-3.5 h-3.5" /> : <Bot className="w-4 h-4" />}
+                {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
               </div>
 
               {/* Message Bubble */}
               <div
-                className={`max-w-[88%] rounded-xl p-3.5 ${
+                className={`max-w-[88%] border-2 border-black p-3 shadow-[2px_2px_0px_0px_#000] ${
                   isUser
-                    ? 'bg-white/[0.08] text-white border border-white/[0.08]'
-                    : 'bg-white/[0.02] border border-white/[0.06] text-slate-200'
+                    ? 'bg-black text-[#FFF570]'
+                    : 'bg-white text-black'
                 }`}
               >
-                {/* Safety verdict header */}
+                {/* Safety verdict header for assistant */}
                 {!isUser && msg.safety_verdict && (
-                  <div className="mb-2 flex items-center justify-between gap-2 pb-1.5 border-b border-white/[0.05]">
-                    <span
-                      className={`inline-flex items-center gap-1 font-semibold text-[10px] px-2 py-0.5 rounded-md uppercase tracking-wide ${
-                        msg.safety_verdict === 'SAFE'
-                          ? 'bg-emerald-500/10 text-emerald-400'
-                          : msg.safety_verdict === 'SAFE_WITH_CAUTION'
-                          ? 'bg-amber-500/10 text-amber-400'
-                          : 'bg-rose-500/10 text-rose-400'
-                      }`}
-                    >
-                      <Shield className="w-3 h-3" />
+                  <div className="mb-2 flex items-center justify-between gap-2 pb-1.5 border-b border-black">
+                    <span className="inline-flex items-center gap-1 font-bold text-[9px] px-1.5 py-0.5 uppercase tracking-wider bg-black text-[#FFF570]">
+                      <Shield className="w-3 h-3 text-[#FFF570]" />
                       {msg.safety_verdict.replace(/_/g, ' ')}
                     </span>
-                    <span className="text-[10px] font-mono text-slate-500">{msg.timestamp}</span>
+                    <span className="text-[9px] text-black/60">{msg.timestamp}</span>
                   </div>
                 )}
 
                 {/* Message Content */}
-                <div className="whitespace-pre-line leading-relaxed text-[11px] font-normal text-slate-300">
+                <div className="whitespace-pre-line leading-relaxed text-[11px] font-sans text-current">
                   {msg.content}
                 </div>
 
-                {/* Attached Actions */}
+                {/* Attached Actions: Evidence Drawer Button */}
                 {!isUser && (
-                  <div className="mt-2.5 pt-2 border-t border-white/[0.04] flex items-center justify-between gap-2">
+                  <div className="mt-2.5 pt-2 border-t border-black/30 flex flex-wrap items-center justify-between gap-2">
                     {msg.evidence ? (
                       <button
                         onClick={() => {
                           setActiveEvidence(msg.evidence || null);
                           setActiveTraces(msg.traces);
                         }}
-                        className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] px-2 py-1 rounded transition-colors cursor-pointer"
+                        className="flex items-center gap-1 text-[9px] font-bold uppercase border border-black px-2 py-0.5 bg-black/5 hover:bg-black hover:text-[#FFF570] transition-colors cursor-pointer"
                       >
-                        <HelpCircle className="w-3 h-3 text-cyan-400" />
-                        <span>Evidence & Reasoning</span>
+                        [+] INSPECT EVIDENCE & TRACES
                       </button>
-                    ) : <div />}
+                    ) : (
+                      <span className="text-[9px] text-black/50">DETERMINISTIC VERIFIED</span>
+                    )}
 
-                    {soundEnabled && (
-                      <button
-                        onClick={() => voiceService.speak(msg.content, language)}
-                        className="text-slate-400 hover:text-white p-1 rounded transition-colors cursor-pointer"
-                        title="Listen aloud"
-                      >
-                        <Volume2 className="w-3.5 h-3.5" />
-                      </button>
+                    {msg.evidence?.intent_detected && (
+                      <span className="text-[8px] uppercase border border-black/40 px-1 py-0.2 text-black/70">
+                        {msg.evidence.intent_detected}
+                      </span>
                     )}
                   </div>
                 )}
@@ -157,76 +143,65 @@ export const ChatPanel: React.FC = () => {
           );
         })}
 
-        {/* Multi-Agent Orchestration Loading Indicator */}
+        {/* Loading Indicator */}
         {isAnalyzing && (
-          <div className="flex items-start gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center flex-shrink-0">
-              <Activity className="w-4 h-4 animate-spin" />
-            </div>
-            <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 text-xs text-slate-300 max-w-[85%]">
-              <div className="flex items-center gap-2 font-medium text-cyan-300 text-[11px]">
-                <span>Analyzing conditions & routing...</span>
-              </div>
-            </div>
+          <div className="flex items-center gap-2 p-3 border-2 border-black bg-white text-black animate-pulse">
+            <Activity className="w-4 h-4 text-black animate-spin" />
+            <span className="font-bold text-[10px] tracking-wider uppercase">
+              ORCHESTRATING MULTI-AGENT SWARM INGESTION...
+            </span>
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. Input Form */}
-      <div className="p-3 border-t border-white/[0.06] bg-[#070a12]/80">
-        {isListening && (
-          <div className="mb-2 px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-between text-xs text-rose-300">
-            <span className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
-              Listening...
-            </span>
-          </div>
-        )}
+      {/* 3. Input Formulation Strip */}
+      <form onSubmit={handleSubmit} className="border-t-2 border-black p-2.5 bg-[#FFF570] flex items-center gap-2">
+        <input
+          type="text"
+          value={inputQuery}
+          onChange={(e) => setInputQuery(e.target.value)}
+          placeholder="DISPATCH QUERY OR ASK HARBOR COORDINATOR..."
+          disabled={isAnalyzing}
+          className="flex-1 border-2 border-black px-3 py-2 bg-white text-black font-mono text-xs outline-none focus:ring-1 focus:ring-black placeholder:text-black/50 font-semibold"
+        />
 
-        <form onSubmit={handleSubmit} className="flex items-center gap-2">
-          {/* Voice Mic */}
-          <button
-            type="button"
-            onClick={toggleVoiceInput}
-            title={isListening ? 'Stop' : 'Voice Input'}
-            className={`p-2 rounded-xl border transition-colors cursor-pointer ${
-              isListening
-                ? 'bg-rose-500 text-white border-rose-400'
-                : 'bg-white/[0.04] border-white/[0.08] text-slate-400 hover:text-white'
-            }`}
-          >
-            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-          </button>
+        {/* Voice Input Button */}
+        <button
+          type="button"
+          onClick={toggleVoiceInput}
+          title={isListening ? 'Stop listening' : 'Start voice input'}
+          className={`border-2 border-black p-2 cursor-pointer transition-colors ${
+            isListening
+              ? 'bg-rose-500 text-white animate-bounce'
+              : 'bg-white text-black hover:bg-black hover:text-[#FFF570]'
+          }`}
+        >
+          {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+        </button>
 
-          {/* Text Input */}
-          <input
-            type="text"
-            value={inputQuery}
-            onChange={(e) => setInputQuery(e.target.value)}
-            placeholder={isListening ? 'Listening...' : 'Ask about PFZ, sea conditions, weather, or safe route...'}
-            disabled={isAnalyzing}
-            className="flex-1 bg-white/[0.03] border border-white/[0.08] focus:border-cyan-500/50 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 outline-none transition-colors"
-          />
+        {/* Send Button */}
+        <button
+          type="submit"
+          disabled={isAnalyzing || !inputQuery.trim()}
+          className="border-2 border-black p-2 bg-black text-[#FFF570] hover:bg-transparent hover:text-black transition-colors disabled:opacity-40 cursor-pointer"
+        >
+          <Send className="w-4 h-4" />
+        </button>
+      </form>
 
-          {/* Send */}
-          <button
-            type="submit"
-            disabled={!inputQuery.trim() || isAnalyzing}
-            className="p-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 text-slate-950 font-bold transition-colors cursor-pointer"
-          >
-            <Send className="w-4 h-4" />
-          </button>
-        </form>
-      </div>
-
-      {/* Evidence Modal */}
-      <EvidenceDrawer
-        evidence={activeEvidence}
-        traces={activeTraces}
-        onClose={() => setActiveEvidence(null)}
-      />
+      {/* Evidence Drawer Modal */}
+      {activeEvidence && (
+        <EvidenceDrawer
+          evidence={activeEvidence}
+          traces={activeTraces}
+          onClose={() => {
+            setActiveEvidence(null);
+            setActiveTraces(undefined);
+          }}
+        />
+      )}
 
     </div>
   );

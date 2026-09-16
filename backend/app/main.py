@@ -12,9 +12,12 @@ from app.routes.api import router as api_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize SQLite schema
-    init_db()
-    print("SamudraAI database initialized.")
+    # Initialize SQLite schema safely
+    try:
+        init_db()
+        print("SamudraAI database initialized.")
+    except Exception as e:
+        print(f"Warning: SQLite database initialization notice ({e}). Continuing in resilient mode.")
     yield
 
 app = FastAPI(
@@ -24,33 +27,36 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
+# Configure CORS - allow all origins cleanly
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
-# Include API Router
+# Include API Router under /api prefix AND as root routes for proxies that strip /api
+app.include_router(api_router, prefix="/api")
 app.include_router(api_router)
 
 # Mount frontend production build if available
 frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
 
 if os.path.exists(frontend_dist):
-    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
+    assets_dir = os.path.join(frontend_dist, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
-    @app.get("/marine_ocean_satellite.jpg")
-    async def serve_marine_img():
-        img_path = os.path.join(frontend_dist, "marine_ocean_satellite.jpg")
-        if os.path.exists(img_path):
-            return FileResponse(img_path)
-        return FileResponse(os.path.join(frontend_dist, "index.html"))
-
-    @app.get("/")
-    async def serve_spa():
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str = ""):
+        # Avoid intercepting API routes or docs
+        if full_path.startswith("api") or full_path in ["docs", "redoc", "openapi.json"]:
+            return {"detail": "Not Found"}
+        target = os.path.join(frontend_dist, full_path)
+        if full_path and os.path.isfile(target):
+            return FileResponse(target)
         return FileResponse(os.path.join(frontend_dist, "index.html"))
 else:
     @app.get("/")
@@ -67,3 +73,4 @@ else:
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+

@@ -14,13 +14,6 @@ class ExecutionPlan:
 class PlannerAgent:
     """Analyzes user queries, determines intent, and plans multi-agent workflows."""
 
-    def __init__(self):
-        try:
-            from app.agents.llm_client import GeminiLLMClient
-            self.llm_client = GeminiLLMClient()
-        except Exception:
-            self.llm_client = None
-
     def detect_language(self, text: str) -> str:
         # Detect Indian scripts based on Unicode block ranges
         for char in text:
@@ -43,54 +36,46 @@ class PlannerAgent:
                 return "or"
         return "en"
 
-    async def plan_query_agentic(self, query: str, active_coords: Coordinates, lang_override: Optional[str] = None) -> ExecutionPlan:
-        """Asynchronously plans using Gemini LLM if available, falling back to rule-based logic."""
-        detected_lang = lang_override or self.detect_language(query)
-
-        if self.llm_client:
-            llm_plan = await self.llm_client.plan_intent(query, active_coords, detected_lang)
-            if llm_plan:
-                return ExecutionPlan(
-                    intent=llm_plan.get("intent", "general_marine"),
-                    subtasks=llm_plan.get("subtasks", ["Analyze satellite marine observations"]),
-                    required_agents=llm_plan.get("required_agents", ["weather", "ocean", "risk", "visualization", "explanation"]),
-                    target_time=llm_plan.get("target_time", "current"),
-                    language=detected_lang
-                )
-
-        # Fallback to deterministic regex-based plan
-        return self.plan_query(query, active_coords, lang_override)
-
     def plan_query(self, query: str, active_coords: Coordinates, lang_override: Optional[str] = None) -> ExecutionPlan:
-        q = query.lower()
+        q = query.lower().strip()
         detected_lang = lang_override or self.detect_language(query)
 
-        # 1. Intent Matching with Multilingual Keywords
-        # Greeting / Conversational small talk
-        clean_words = set(re.findall(r'\b[a-zA-Z\u0900-\u0D7F]+\b', q))
-        greeting_tokens = {"hi", "hello", "hey", "hola", "namaste", "namaskar", "vanakkam", "pranam", "sup", "yo", "greeting", "greetings", "नमस्ते", "வணக்கம்", "നമസ്കാരം", "హలో"}
+        # 1. Intent Matching
+        greeting_words = [
+            "hi", "hello", "hey", "namaste", "vanakkam", "namaskara", "adaab",
+            "good morning", "good evening", "good afternoon", "who are you",
+            "what can you do", "help", "hlo", "helo", "hii", "hiii", "yo", "sup",
+            "नमस्ते", "வணக்கம்", "నమస్కారం", "ನಮಸ್ಕಾರ", "नमस्कार", "কেমন আছেন", "নমস্কার", "سلام"
+        ]
         is_greeting = (
-            any(w in greeting_tokens for w in clean_words) or
-            any(phrase in q for phrase in ["good morning", "good evening", "good afternoon", "how are you", "who are you", "what can you do", "help me"])
-        ) and not any(w in q for w in ["fish", "pfz", "wave", "wind", "route", "spot", "sst", "cyclone", "storm", "safe", "border", "hazard"])
+            q in greeting_words or
+            any(q == g for g in greeting_words) or
+            any(q.startswith(g + " ") for g in ["hi", "hello", "hey", "namaste", "vanakkam"]) or
+            (len(q.split()) <= 3 and any(w in ["hi", "hello", "hey", "namaste", "vanakkam", "hlo", "hii"] for w in q.split()))
+        )
 
         if is_greeting:
             intent = "greeting"
-            subtasks = ["Acknowledge greeting", "State capabilities and active vessel port"]
+            subtasks = [
+                "Acknowledge user greeting in operational context",
+                "Identify regional language preference",
+                "Present SamudraAI marine intelligence capabilities"
+            ]
             agents = ["explanation"]
 
-        elif any(w in q for w in ["route", "safest route", "navigate", "navigation", "direction", "way", "how to reach", "रास्ता", "मार्ग", "பாதை", "வழி", "మార్గం", "വഴി"]):
+        elif any(w in q for w in ["route", "safest route", "navigate", "navigation", "रास्ता", "मार्ग", "मार्गदर्शन", "வழி", "దారి", "ದಾರಿ", "পথ"]):
             intent = "safe_route"
             subtasks = [
                 "Locate origin vessel coordinates",
-                "Discover nearest target PFZ destination coordinates",
-                "Scan geospatial hazard geofences (MPAs, IMBL, Restricted Zones, Shallow Shoals)",
-                "Identify danger zones and safe seaward bearing",
-                "Synthesize navigational coordinates and danger avoidance advisory"
+                "Discover nearest target PFZ destination",
+                "Retrieve geospatial hazard geofences (MPAs, IMBL, Restricted Zones)",
+                "Compute direct shortest route versus hazard-avoiding safe corridor",
+                "Execute deterministic risk scoring for both routes",
+                "Synthesize explainable navigational recommendation"
             ]
-            agents = ["gis", "pfz", "risk", "visualization", "explanation"]
+            agents = ["gis", "pfz", "route", "risk", "visualization", "explanation"]
 
-        elif any(w in q for w in ["safest pfz", "which pfz is safest", "safe fishing zone", "best pfz", "सुरक्षित मछली", "பாதுகாப்பான மீன்பிடி"]):
+        elif any(w in q for w in ["safest pfz", "which pfz is safest", "safe fishing zone", "best pfz", "सुरक्षित मछली क्षेत्र"]):
             intent = "safest_pfz"
             subtasks = [
                 "Retrieve current PFZs within search radius",
@@ -100,7 +85,7 @@ class PlannerAgent:
             ]
             agents = ["pfz", "weather", "ocean", "risk", "visualization", "explanation"]
 
-        elif any(w in q for w in ["nearest pfz", "pfz", "potential fishing zone", "fish zone", "मछली", "மீன்பிடி", "చేపల", "മത്സ്യ"]):
+        elif any(w in q for w in ["nearest pfz", "pfz", "potential fishing zone", "fish zone", "fishing zone", "मछली", "मत्स्य", "மீன்", "చేపలు", "ಮೀನು", "মাছ"]):
             intent = "pfz_query"
             subtasks = [
                 "Retrieve spaceborne thermal and ocean color products from Oceansat-3",
@@ -111,7 +96,7 @@ class PlannerAgent:
             ]
             agents = ["discovery", "ocean", "pfz", "gis", "visualization", "explanation"]
 
-        elif any(w in q for w in ["safe", "safety", "tomorrow morning", "tomorrow", "weather tomorrow", "सुरक्षित", "பாதுகாப்ப", "సురక్షిత", "കാലാവസ്ഥ"]):
+        elif any(w in q for w in ["safe", "safety", "tomorrow morning", "tomorrow", "weather tomorrow", "सुरक्षा", "सुरक्षित", "பாதுகாப்பு", "రక్షణ", "ಸುರಕ್ಷತೆ", "নিরাপদ"]):
             intent = "safety_check"
             subtasks = [
                 "Determine temporal target (tomorrow morning / 24h horizon)",
@@ -123,7 +108,7 @@ class PlannerAgent:
             ]
             agents = ["weather", "ocean", "gis", "risk", "alert", "visualization", "explanation"]
 
-        elif any(w in q for w in ["wave", "wind", "swell", "sea state", "हवा", "लहर", "காற்று", "அலை", "గాలి", "అలలు", "കാറ്റ്", "തിരമാല"]):
+        elif any(w in q for w in ["wave", "wind", "swell", "sea state", "हवा", "लहर", "तरंग", "காற்று", "அலை", "గాలి", "అలలు", "ಗಾಳಿ", "ಅಲೆಗಳು", "বাতাস", "ঢেউ"]):
             intent = "wave_wind"
             subtasks = [
                 "Retrieve high-resolution wave height, swell direction, and period",
@@ -133,7 +118,7 @@ class PlannerAgent:
             ]
             agents = ["weather", "ocean", "risk", "visualization", "explanation"]
 
-        elif any(w in q for w in ["chlorophyll", "sst", "temperature", "plankton", "thermal", "क्लोरोफिल", "तापमान"]):
+        elif any(w in q for w in ["chlorophyll", "sst", "temperature", "plankton", "thermal", "तापमान", "क्लोरोफिल", "வெப்பநிலை", "ఉష్ణోగ్రత"]):
             intent = "chlorophyll_sst"
             subtasks = [
                 "Retrieve satellite sea surface temperature (SST) field",
@@ -143,7 +128,7 @@ class PlannerAgent:
             ]
             agents = ["discovery", "ocean", "visualization", "explanation"]
 
-        elif any(w in q for w in ["cyclone", "lightning", "storm", "alert", "warning", "तूफान", "चक्रवात", "புயல்", "ఎచ్చరిక", "മുന്നറിയിപ്പ്"]):
+        elif any(w in q for w in ["cyclone", "lightning", "storm", "alert", "warning", "तूफान", "चक्रवात", "चेतावनी", "புயல்", "எச்சரிக்கை", "తుఫాను", "హెచ్చరిక", "ಚಂಡಮಾರುತ"]):
             intent = "alerts_query"
             subtasks = [
                 "Query active severe weather alerts from IMD",
@@ -153,7 +138,7 @@ class PlannerAgent:
             ]
             agents = ["weather", "alert", "visualization", "explanation"]
 
-        elif any(w in q for w in ["restricted", "boundary", "imbl", "sanctuary", "protected", "सीमा", "எல்லை", "సరిహద్దు", "അതിർത്തി"]):
+        elif any(w in q for w in ["restricted", "boundary", "imbl", "sanctuary", "protected", "सीमा", "प्रतिबंधित", "எல்லை", "சரணாலயம்", "సరిహద్దు", "ಗಡಿ"]):
             intent = "boundary_check"
             subtasks = [
                 "Calculate distance to sovereign International Maritime Boundary Line (IMBL)",
@@ -173,7 +158,7 @@ class PlannerAgent:
             ]
             agents = ["discovery", "weather", "ocean", "gis", "risk", "visualization", "explanation"]
 
-        target_time = "tomorrow_morning" if any(w in q for w in ["tomorrow", "कल", "நாளை", "రేపు", "നാളെ"]) else "current"
+        target_time = "tomorrow_morning" if "tomorrow" in q else "current"
 
         return ExecutionPlan(
             intent=intent,
